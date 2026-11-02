@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5c5c">
+<title>Dorpenjacht rond Den Bosch</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#eef2ee;--card:#fff;--ink:#1d2a2a;--mute:#66767a;--line:#d6dfdb;--brand:#1f5c5c;--a:#2f5fa8;--b:#d4772b;--ok:#2e8b57;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#121a1a;--card:#1b2626;--ink:#e8f0ee;--mute:#93a5a6;--line:#2c3b3b;--brand:#5fb3b0;--a:#7fa6e6;--b:#f0a064;--ok:#6fcf97;color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom))}
+header{padding:20px 18px 8px}
+h1{font:700 24px/1.15 Georgia,"Times New Roman",serif;margin:0}
+header p{margin:4px 0 0;color:var(--mute);font-size:14px}
+main{padding:8px 14px;max-width:640px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:14px}
+.row .t{flex:1;min-width:0}
+.row b{font-size:17px}
+.sub{color:var(--mute);font-size:13px}
+.chk{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:17px;color:#fff;background:none;flex:none;padding:0}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.score{font:700 15px Georgia,serif;color:var(--brand);min-width:34px;text-align:right}
+.body{padding:2px 14px 14px;border-top:1px solid var(--line)}
+.cat{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0}
+.cat span{font-size:15px}
+.stars{display:flex;gap:2px}
+.stars button{border:0;background:none;font-size:27px;line-height:1;padding:2px;color:var(--line);min-width:34px;min-height:38px}
+.stars button.on{color:var(--c,var(--b))}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:10px;font:inherit}
+button.p{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:11px 16px;font:600 15px inherit;font-family:inherit}
+button.s{background:none;color:var(--brand);border:1.5px solid var(--brand);border-radius:10px;padding:10px 14px;font:600 15px inherit;font-family:inherit}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:10px 0 9px;font:600 12px inherit;font-family:inherit}
+nav button i{display:block;font-style:normal;font-size:21px}
+nav button.on{color:var(--brand)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.cmp{display:grid;grid-template-columns:1fr 44px 44px 44px;gap:4px 6px;align-items:center;font-size:14px;margin-top:8px}
+.cmp .h{color:var(--mute);font-size:12px;text-align:center}
+.cmp .n{text-align:center;font-weight:700}
+.diff{background:#f5d9b8;color:#5a3200;border-radius:6px}
+.rank{font:700 20px Georgia,serif;width:26px;color:var(--mute)}
+.note{font-size:14px;color:var(--mute);margin:4px 0;white-space:pre-wrap}
+.empty{text-align:center;color:var(--mute);padding:30px 10px}
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+.msg{font-size:14px;color:var(--ok);min-height:20px;margin-top:6px}
+#map{height:calc(100vh - 250px);min-height:340px;border-radius:14px;border:1px solid var(--line);margin-top:10px}
+.pin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 13px Georgia,serif;color:#fff;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.pin.todo{background:#fff;color:#66767a;border:3px solid #8a9a9c}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:10px 2px}
+.leaflet-popup-content{font:14px/1.4 -apple-system,"Segoe UI",sans-serif;color:#1d2a2a}
+.leaflet-popup-content button{margin-top:6px;background:#1f5c5c;color:#fff;border:0;border-radius:8px;padding:7px 12px;font:600 13px inherit}
+body.locked header,body.locked nav{display:none}
+</style>
+</head>
+<body>
+<header><h1 id="ttl">Dorpenjacht</h1><p id="sub"></p></header>
+<main id="app"></main>
+<nav>
+  <button data-t="places"><i>📍</i>Dorpen</button>
+  <button data-t="map"><i>🗺️</i>Kaart</button>
+  <button data-t="sum"><i>⚖️</i>Samen</button>
+  <button data-t="me"><i>👥</i>Delen</button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const CATS=["Sfeer & uitstraling","Groen & natuur","Voorzieningen (winkels, horeca)","Rust & veiligheid","Bereikbaarheid (OV/auto/fiets)","Type woningen & prijsniveau","Buurtgevoel: kunnen we hier wonen?"];
+const COORDS={"Rosmalen":[51.7167,5.3667],"Vught":[51.6567,5.2917],"Sint-Michielsgestel":[51.6417,5.3533],"Berlicum":[51.6900,5.4600],"Den Dungen":[51.6700,5.4200],"Schijndel":[51.6167,5.4333],"Heusden":[51.7333,5.1389],"Vlijmen":[51.6950,5.2150],"Nuland":[51.7200,5.4800],"Haaren":[51.6000,5.2167],"Helvoirt":[51.6317,5.2050],"Boxtel":[51.5900,5.3283],"Engelen":[51.7100,5.3100],"Empel":[51.7333,5.3333],"Hintham":[51.7050,5.3500],"Maaskantje":[51.6250,5.4417]};
+const DEFAULT_PLACES=Object.keys(COORDS);
+const CODE_HASH="51f9aa831c4e1aba611a0c555ea6cfa8562606aa0621dcdb873cea573c01c915";
+const OK_KEY="dorpenjacht.ok";
+let unlocked=false;try{unlocked=localStorage.getItem(OK_KEY)===CODE_HASH}catch(e){}
+async function sha(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+const KEY="dorpenjacht.v1";
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=S||{me:"",places:[],data:{}};
+if(!S.places.length)S.places=DEFAULT_PLACES.map(mk);
+S.places.forEach(p=>{if(!p.ll&&COORDS[p.name])p.ll=COORDS[p.name]});
+let map=null,tab="places",open=null,sumOpen=null,msg="";
+
+function mk(n){return{id:slug(n),name:n,ll:COORDS[n]}}
+function slug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function entry(p,id){const d=S.data[p]=S.data[p]||{};return d[id]=d[id]||{visited:false,r:{},note:""}}
+function avg(e){const v=Object.values(e?.r||{}).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null}
+function fmt(n){return n==null?"–":n.toFixed(1).replace(".",",")}
+function people(){const n=Object.keys(S.data);if(S.me&&!n.includes(S.me))n.unshift(S.me);return n.sort((a,b)=>a===S.me?-1:b===S.me?1:0)}
+function color(p){return p===S.me?"var(--a)":"var(--b)"}
+
+/* delen */
+function enc(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.me,p:S.places,d:S.data[S.me]||{}}))))}
+function importCode(code){
+  try{
+    const o=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if(!o.n||o.n===S.me)throw 0;
+    S.data[o.n]=o.d;
+    o.p.forEach(p=>{if(!S.places.some(x=>x.id===p.id))S.places.push(p)});
+    save();return o.n;
+  }catch(e){return null}
+}
+
+function render(){
+  document.body.classList.toggle("locked",!unlocked);
+  if(!unlocked){
+    const app=document.getElementById("app");
+    document.getElementById("sub").textContent="";
+    app.innerHTML=`<div class="card" style="padding:18px;margin-top:40px"><h1 style="font-size:22px">Dorpenjacht</h1><p class="sub">Voer de toegangscode in.</p><input type="text" id="cd" autocapitalize="off" autocomplete="off" placeholder="Toegangscode"><div class="btns"><button class="p" id="ok">Openen</button></div><div class="msg" id="cm" style="color:#c0392b"></div></div>`;
+    const go=async()=>{const v=document.getElementById("cd").value.trim();let h="";try{h=await sha(v)}catch(e){}
+      if(h===CODE_HASH){unlocked=true;try{localStorage.setItem(OK_KEY,h)}catch(e){}render()}else document.getElementById("cm").textContent="Dat is niet de juiste code."};
+    document.getElementById("ok").onclick=go;
+    document.getElementById("cd").onkeydown=e=>{if(e.key==="Enter")go()};
+    return;
+  }
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+  const app=document.getElementById("app");
+  if(!S.me){
+    document.getElementById("sub").textContent="";
+    app.innerHTML=`<div class="card" style="padding:18px"><b style="font-size:18px">Wie ben jij?</b><p class="sub">Vul je voornaam in. Zo zie je straks wie wat vond.</p><input type="text" id="nm" placeholder="Voornaam" autocomplete="given-name"><div class="btns"><button class="p" id="go">Beginnen</button></div></div>`;
+    document.getElementById("go").onclick=()=>{const v=document.getElementById("nm").value.trim();if(v){S.me=v;save();render()}};
+    return;
+  }
+  const seen=S.places.filter(p=>entry(S.me,p.id).visited).length;
+  document.getElementById("sub").textContent=`${S.me} · ${seen} van ${S.places.length} dorpen bezocht`;
+  if(map){map.remove();map=null}
+  ({places:vPlaces,map:vMap,sum:vSum,me:vShare})[tab](app);
+}
+
+function vPlaces(app){
+  let h="";
+  S.places.forEach(p=>{
+    const e=entry(S.me,p.id),a=avg(e),o=open===p.id;
+    h+=`<div class="card"><div class="row"><button class="chk ${e.visited?"on":""}" data-v="${p.id}" aria-label="Bezocht">${e.visited?"✓":""}</button>
+    <div class="t" data-o="${p.id}"><b>${esc(p.name)}</b><div class="sub">${e.visited?"Bezocht":"Nog te bezoeken"}</div></div>
+    <div class="score" data-o="${p.id}">${a?fmt(a):""}</div></div>`;
+    if(o){
+      h+=`<div class="body">`+CATS.map((c,i)=>`<div class="cat"><span>${c}</span><div class="stars" style="--c:${color(S.me)}">${[1,2,3,4,5].map(n=>`<button data-r="${p.id}|${i}|${n}" class="${(e.r[i]||0)>=n?"on":""}" aria-label="${n} sterren">★</button>`).join("")}</div></div>`).join("")+
+      `<label class="f">Notities</label><textarea rows="3" data-n="${p.id}" placeholder="Wat viel je op? Winkels, straten, geur van de bakker…">${esc(e.note)}</textarea></div>`;
+    }
+    h+=`</div>`;
+  });
+  h+=`<div class="card" style="padding:14px"><b>Dorp toevoegen</b><div class="btns" style="flex-wrap:nowrap"><input type="text" id="np" placeholder="Naam van het dorp"><button class="p" id="add">+</button></div></div>`;
+  app.innerHTML=h;
+  app.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const e=entry(S.me,b.dataset.v);e.visited=!e.visited;save();render()});
+  app.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{open=open===b.dataset.o?null:b.dataset.o;render()});
+  app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{
+    const[id,i,n]=b.dataset.r.split("|"),e=entry(S.me,id);
+    e.r[i]=e.r[i]==n?0:+n; if(e.r[i])e.visited=true; save();
+    const y=scrollY;render();scrollTo(0,y);
+  });
+  app.querySelectorAll("[data-n]").forEach(t=>t.oninput=()=>{entry(S.me,t.dataset.n).note=t.value;save()});
+  document.getElementById("add").onclick=()=>{
+    const v=document.getElementById("np").value.trim();if(!v)return;
+    const id=slug(v);if(!S.places.some(p=>p.id===id)){const pl={id,name:v};S.places.push(pl);save();
+      fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=nl&q="+encodeURIComponent(v+", Noord-Brabant")).then(r=>r.json()).then(j=>{if(j[0]){pl.ll=[+j[0].lat,+j[0].lon];save()}}).catch(()=>{})}
+    open=id;render();
+  };
+}
+
+function pinInfo(p){
+  const P=people(),av=P.map(n=>avg(S.data[n]?.[p.id])),have=av.filter(x=>x!=null);
+  const tot=have.length?have.reduce((a,b)=>a+b,0)/have.length:null;
+  return{P,av,tot,visited:P.some(n=>S.data[n]?.[p.id]?.visited)||tot!=null};
+}
+function scoreColor(t){return t>=4?"#2e8b57":t>=3?"#c9a227":t>=2?"#d4772b":"#c0392b"}
+function vMap(app){
+  const todo=S.places.filter(p=>!pinInfo(p).visited).length;
+  app.innerHTML=`<div id="map"></div><div class="leg"><span><span class="dot" style="background:#fff;border:2px solid #8a9a9c"></span>Nog te bezoeken (${todo})</span><span><span class="dot" style="background:#2e8b57"></span>4+</span><span><span class="dot" style="background:#c9a227"></span>3 tot 4</span><span><span class="dot" style="background:#d4772b"></span>2 tot 3</span><span><span class="dot" style="background:#c0392b"></span>onder 2</span></div>`;
+  map=L.map("map",{zoomControl:true}).setView([51.67,5.34],11);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(map);
+  const pts=[];
+  S.places.forEach(p=>{
+    if(!p.ll)return;
+    const i=pinInfo(p);pts.push(p.ll);
+    const cls=i.tot==null?(i.visited?"":"todo"):"",bg=i.tot!=null?scoreColor(i.tot):i.visited?"#2f5fa8":"";
+    const icon=L.divIcon({className:"",iconSize:[34,34],iconAnchor:[17,17],html:`<div class="pin ${cls}" style="${bg?`background:${bg}`:""}">${i.tot!=null?fmt(i.tot):i.visited?"✓":""}</div>`});
+    const lines=i.P.map((n,k)=>`<span class="dot" style="background:${color(n)}"></span>${esc(n)}: ${fmt(i.av[k])}`).join("<br>");
+    L.marker(p.ll,{icon}).addTo(map).bindPopup(`<b>${esc(p.name)}</b><br>${i.tot!=null?lines+`<br><b>Samen: ${fmt(i.tot)}</b>`:i.visited?"Bezocht, nog niet beoordeeld":"Nog te bezoeken"}<br><button onclick="goPlace('${p.id}')">Beoordelen</button>`);
+  });
+  if(pts.length)map.fitBounds(pts,{padding:[30,30]});
+  setTimeout(()=>map&&map.invalidateSize(),50);
+}
+function goPlace(id){tab="places";open=id;render();scrollTo(0,0)}
+
+function vSum(app){
+  const P=people();
+  const rows=S.places.map(p=>{
+    const av=P.map(n=>avg(S.data[n]?.[p.id]));
+    const have=av.filter(x=>x!=null);
+    return{p,av,tot:have.length?have.reduce((a,b)=>a+b,0)/have.length:null,both:have.length===P.length&&P.length>1};
+  }).filter(r=>r.tot!=null).sort((a,b)=>b.tot-a.tot);
+  if(!rows.length){app.innerHTML=`<div class="empty">Nog geen beoordelingen.<br>Geef op het tabblad Dorpen sterren aan een dorp.</div>`;return}
+  let h=P.length<2?`<div class="card" style="padding:14px"><span class="sub">Je ziet nu alleen jouw scores. Importeer de code van je vriendin op het tabblad Delen om samen te vergelijken.</span></div>`:
+    `<div class="sub" style="padding:4px 4px 0">`+P.map(n=>`<span class="dot" style="background:${color(n)}"></span>${esc(n)}  `).join("")+`</div>`;
+  rows.forEach((r,i)=>{
+    const o=sumOpen===r.p.id;
+    h+=`<div class="card"><div class="row" data-s="${r.p.id}"><div class="rank">${i+1}</div><div class="t"><b>${esc(r.p.name)}</b><div class="sub">${P.map((n,k)=>`<span class="dot" style="background:${color(n)}"></span>${fmt(r.av[k])}`).join("  ")}</div></div><div class="score" style="font-size:20px">${fmt(r.tot)}</div></div>`;
+    if(o){
+      h+=`<div class="body"><div class="cmp"><span></span>${P.map(n=>`<span class="h">${esc(n.slice(0,6))}</span>`).join("")}${P.length<2?'<span></span>':""}<span class="h">Samen</span>`;
+      CATS.forEach((c,i)=>{
+        const v=P.map(n=>S.data[n]?.[r.p.id]?.r?.[i]||0),have=v.filter(Boolean);
+        const gap=P.length>1&&v.every(Boolean)&&Math.abs(v[0]-v[1])>=2;
+        h+=`<span>${c}</span>`+P.map((n,k)=>`<span class="n ${gap?"diff":""}" style="color:${color(n)}">${v[k]||"–"}</span>`).join("")+(P.length<2?"<span></span>":"")+`<span class="n">${have.length?fmt(have.reduce((a,b)=>a+b,0)/have.length):"–"}</span>`;
+      });
+      h+=`</div>`;
+      if(P.length>1)h+=`<div class="sub" style="margin-top:8px">Oranje cijfers: jullie verschillen 2 sterren of meer. Bespreek die even.</div>`;
+      P.forEach(n=>{const t=S.data[n]?.[r.p.id]?.note;if(t)h+=`<div class="note"><span class="dot" style="background:${color(n)}"></span><b>${esc(n)}:</b> ${esc(t)}</div>`});
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  });
+  app.innerHTML=h;
+  app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{sumOpen=sumOpen===b.dataset.s?null:b.dataset.s;render()});
+}
+
+function vShare(app){
+  const code=enc(),link=location.origin+location.pathname+"#d="+code;
+  const partner=people().filter(n=>n!==S.me);
+  app.innerHTML=`<div class="card" style="padding:16px">
+    <b>Jouw scores delen</b>
+    <p class="sub">Elk van jullie gebruikt de app op de eigen telefoon. Stuur je link naar je vriendin, dan opent de app bij haar met jouw scores erin. Dit herhaal je na elke nieuwe beoordeling.</p>
+    <div class="btns"><button class="p" id="sh">Stuur mijn scores</button><button class="s" id="cp">Kopieer link</button></div>
+    <div class="msg" id="m1"></div></div>
+  <div class="card" style="padding:16px">
+    <b>Scores van je partner toevoegen</b>
+    <p class="sub">Heb je een link gekregen? Open die gewoon. Of plak hier de code of link.</p>
+    <textarea rows="3" id="imp" placeholder="Plak code of link"></textarea>
+    <div class="btns"><button class="p" id="im">Importeren</button></div>
+    <div class="msg" id="m2">${msg}</div>
+    ${partner.length?`<p class="sub">Gekoppeld: ${partner.map(esc).join(", ")}</p>`:""}</div>
+  <div class="card" style="padding:16px"><b>Mijn naam</b><div class="btns" style="flex-wrap:nowrap"><input type="text" id="nm" value="${esc(S.me)}"><button class="s" id="rn">Opslaan</button></div></div>`;
+  const m1=document.getElementById("m1");
+  document.getElementById("sh").onclick=async()=>{
+    try{if(navigator.share){await navigator.share({title:"Mijn dorpenscores",text:`Mijn scores (${S.me})`,url:link});return}}catch(e){return}
+    copy(link,m1);
+  };
+  document.getElementById("cp").onclick=()=>copy(link,m1);
+  document.getElementById("im").onclick=()=>{
+    let v=document.getElementById("imp").value.trim();const i=v.indexOf("#d=");if(i>-1)v=v.slice(i+3);
+    const n=importCode(v);msg=n?`Scores van ${n} toegevoegd.`:"Dat is geen geldige code, of het is je eigen code.";render();
+  };
+  document.getElementById("rn").onclick=()=>{
+    const v=document.getElementById("nm").value.trim();if(!v||v===S.me)return;
+    if(S.data[S.me]){S.data[v]=S.data[S.me];delete S.data[S.me]}S.me=v;save();render();
+  };
+}
+function copy(t,el){
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>el.textContent="Link gekopieerd.").catch(()=>{el.textContent="Kopiëren lukte niet. Houd de link ingedrukt hieronder.";prompt("Kopieer deze link:",t)});
+}
+
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;msg="";scrollTo(0,0);render()});
+
+/* link importeren bij openen */
+(function(){
+  const m=location.hash.match(/^#d=(.+)$/);
+  if(m){
+    history.replaceState(null,"",location.pathname);
+    if(S.me){const n=importCode(m[1]);if(n){tab="sum";msg=`Scores van ${n} toegevoegd.`}}
+    else{pending=m[1]}
+  }
+})();
+var pending=pending||null;
+const _r=render;
+render=function(){
+  if(pending&&S.me){const n=importCode(pending);pending=null;if(n){tab="sum"}}
+  _r();
+};
+render();
+</script>
+</body>
+</html>
